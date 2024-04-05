@@ -79,10 +79,18 @@ public class SnakeGame {
         glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
             if (action == GLFW_PRESS) {
                 switch (key) {
-                    case GLFW_KEY_UP -> snake.direction = Direction.UP;
-                    case GLFW_KEY_DOWN -> snake.direction = Direction.DOWN;
-                    case GLFW_KEY_LEFT -> snake.direction = Direction.LEFT;
-                    case GLFW_KEY_RIGHT -> snake.direction = Direction.RIGHT;
+                    case GLFW_KEY_UP -> {
+                        if (snake.direction != Direction.DOWN) snake.direction = Direction.UP;
+                    }
+                    case GLFW_KEY_DOWN -> {
+                        if (snake.direction != Direction.UP) snake.direction = DOWN;
+                    }
+                    case GLFW_KEY_LEFT -> {
+                        if (snake.direction != RIGHT) snake.direction = LEFT;
+                    }
+                    case GLFW_KEY_RIGHT -> {
+                        if (snake.direction != LEFT) snake.direction = RIGHT;
+                    }
                     case GLFW_KEY_R -> restart();
                     case GLFW_KEY_Q -> glfwSetWindowShouldClose(window, true);
                 }
@@ -246,7 +254,6 @@ public class SnakeGame {
             throw new RuntimeException("Could not init NanoVG.");
         }
 
-        // Assuming you have a .ttf font file in the resources/fonts folder
         font = nvgCreateFont(vg, "Poppins", "src/main/resources/fonts/Poppins-Regular.ttf");
         if (font == -1) {
             throw new RuntimeException("Failed to create font.");
