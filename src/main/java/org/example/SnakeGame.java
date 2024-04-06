@@ -1,6 +1,10 @@
 package org.example;
 
+import org.lwjgl.nanovg.NVGColor;
 import org.lwjgl.opengl.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.example.Direction.*;
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
@@ -41,6 +45,8 @@ public class SnakeGame {
 
     private long vg; // The NanoVG context handle
 
+    private List<Button> buttons;
+
     public SnakeGame() {
         start();
     }
@@ -50,6 +56,7 @@ public class SnakeGame {
         snake = new Snake(GRID_SIZE / 2, GRID_SIZE / 2);
         snake.direction = UP;
         score = 0;
+        buttons = new ArrayList<>();
         spawnFood();
     }
 
@@ -103,6 +110,19 @@ public class SnakeGame {
                     }
                     case GLFW_KEY_R -> restart();
                     case GLFW_KEY_Q -> glfwSetWindowShouldClose(window, true);
+                }
+            }
+        });
+
+        glfwSetMouseButtonCallback(window, (window, button, action, mods) -> {
+            if (button == GLFW_MOUSE_BUTTON_1 && action == GLFW_PRESS) {
+                double[] mouseX = new double[1];
+                double[] mouseY = new double[1];
+                glfwGetCursorPos(window, mouseX, mouseY);
+                for (Button b : buttons) {
+                    if (gameOver && b.isMouseOver((int) mouseX[0], (int) mouseY[0])) {
+                        b.action.run();
+                    }
                 }
             }
         });
@@ -232,28 +252,59 @@ public class SnakeGame {
 
         nvgBeginFrame(vg, WINDOW_WIDTH, WINDOW_HEIGHT, 1); // Start a new frame for NanoVG
 
-        // Set the style for the "GAME OVER" text
-        nvgFontSize(vg, 48.0f); // Font size
-        nvgFontFace(vg, "Poppins"); // Font family
-        nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE); // Centered text
+        NVGColor color = NVGColor.create(); // Prepare color object
 
-        // Calculate the position to draw the text. This example centers it on the screen.
         float x = WINDOW_WIDTH / 2.0f; // Halfway across the width of the window
         float y = WINDOW_HEIGHT / 2.0f; // Halfway down the height of the window
         float lineHeight = 48.0f;
 
-        // Draw the "GAME OVER" text
-        nvgText(vg, x, y, "GAME OVER");
+        // Draw "GAME OVER" text
+        renderCenteredText("GAME OVER", y, 48, color);
 
-        // Move down by lineHeight to render the next line of text
         y += lineHeight;
 
-        // Render the score on the next line
-        nvgText(vg, x, y, "Your score: " + score);
+        // Draw score text
+        renderCenteredText("Your score: " + score, y, 24, color);
+
+        y+= lineHeight;
+
+        // Render button during game over
+        Button restartButton = new Button(x - 50, y, 100, 50, "Restart", this::restart);
+        buttons.add(restartButton);
+        renderButton(restartButton, color);
 
         nvgEndFrame(vg); // End the frame
 
         glfwSwapBuffers(window);
+    }
+
+    private void renderCenteredText(String text, float y, int fontSize, NVGColor color) {
+        nvgFontSize(vg, fontSize);
+        nvgFontFace(vg, "Poppins");
+        nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        nvgRGBA((byte)255, (byte)255, (byte)255, (byte)255, color); // White text color
+        nvgFillColor(vg, color);
+        nvgText(vg, WINDOW_WIDTH / 2.0f, y, text);
+    }
+
+    private void renderButton(Button button, NVGColor color) {
+        nvgBeginPath(vg);
+        nvgRect(vg, button.x, button.y, button.width, button.height);
+
+        // Set background color for the button
+        nvgRGBA((byte)200, (byte)200, (byte)200, (byte)255, color); // Light gray background
+        nvgFillColor(vg, color);
+        nvgFill(vg);
+
+        // Set text color
+        nvgRGBA((byte)0, (byte)0, (byte)0, (byte)255, color); // Black text
+        nvgFillColor(vg, color);
+        nvgFontSize(vg, 20);
+        nvgFontFace(vg, "Poppins");
+        nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        nvgText(vg, button.x + button.width / 2.0f, button.y + button.height / 2.0f, button.label);
+
+        nvgClosePath(vg);
     }
 
     private void initNanoVG() {
