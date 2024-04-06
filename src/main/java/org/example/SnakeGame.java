@@ -39,24 +39,34 @@ public class SnakeGame {
 
     private Snake snake;
     private Point food;
-    private boolean gameOver;
     private long window;
     private int score;
 
     private long vg; // The NanoVG context handle
 
     private List<Button> buttons;
+    private GameState gameState;
 
     public SnakeGame() {
-        start();
+        mainMenu();
     }
 
-    private void start() {
+    private void mainMenu() {
+        gameState = GameState.MAIN_MENU;
+        buttons = new ArrayList<>();
+    }
+
+    private void difficultyMenu() {
+        gameState = GameState.DIFFICULTY_MENU;
+    }
+
+    private void play() {
+        System.out.println("play()");
         // Initialize the snake in the middle of the screen
+        gameState = GameState.PLAYING;
         snake = new Snake(GRID_SIZE / 2, GRID_SIZE / 2);
         snake.direction = UP;
         score = 0;
-        buttons = new ArrayList<>();
         spawnFood();
     }
 
@@ -109,7 +119,7 @@ public class SnakeGame {
                         if (snake.direction != LEFT) snake.direction = RIGHT;
                     }
                     case GLFW_KEY_R -> restart();
-                    case GLFW_KEY_Q -> glfwSetWindowShouldClose(window, true);
+                    case GLFW_KEY_Q -> System.exit(0);
                 }
             }
         });
@@ -120,12 +130,14 @@ public class SnakeGame {
                 double[] mouseY = new double[1];
                 glfwGetCursorPos(window, mouseX, mouseY);
                 for (Button b : buttons) {
-                    if (gameOver && b.isMouseOver((int) mouseX[0], (int) mouseY[0])) {
+                    if (!(gameState == GameState.PLAYING) && b.isMouseOver((int) mouseX[0], (int) mouseY[0])) {
                         b.action.run();
                     }
+
                 }
             }
         });
+
 
         // Make the OpenGL context current
         glfwMakeContextCurrent(window);
@@ -147,50 +159,69 @@ public class SnakeGame {
         double lastUpdateTime = glfwGetTime();
 
         while (!glfwWindowShouldClose(window)) {
+            System.out.println("Loop");
             double currentTime = glfwGetTime();
             double deltaTime = currentTime - lastUpdateTime;
 
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the framebuffer
 
+            switch (gameState) {
+                case MAIN_MENU -> {
+                    System.out.println("GameState.MAIN_MENU");
+                    renderMainMenu();
+                    while (gameState == GameState.MAIN_MENU && !glfwWindowShouldClose(window)) {
+                        glfwPollEvents(); // Keep the window responsive
+                    }
+                }
+                case DIFFICULTY_MENU -> {
+                    System.out.println("GameState.DIFFICULTY_MENU");
+                    renderDifficultyMenu();
+                    while (gameState == GameState.DIFFICULTY_MENU && !glfwWindowShouldClose(window)) {
+                        glfwPollEvents(); // Keep the window responsive
+                    }
+                }
+                case PLAYING -> {
+                    System.out.println("GameState.PLAYING");
+                    renderGame();
 
-            if (deltaTime >= 0.1) { // 10 updates per second
-                update();
-                lastUpdateTime = currentTime;
-            }
+                    if (deltaTime >= 0.1) { // 10 updates per second
+                        update();
+                        lastUpdateTime = currentTime;
+                    }
 
-            if (gameOver) {
-                renderGameOver();
-                while (gameOver && !glfwWindowShouldClose(window)) {
-                    glfwPollEvents(); // Keep the window responsive
+                }
+                case GAME_OVER -> {
+                    System.out.println("GameState.GAME_OVER");
+                    renderGameOver();
+                    while (gameState == GameState.GAME_OVER && !glfwWindowShouldClose(window)) {
+                        glfwPollEvents(); // Keep the window responsive
+                    }
                 }
             }
 
-            render();
             glfwSwapBuffers(window); // Swap the color buffers
             glfwPollEvents();
         }
     }
 
-    private void update() {
-        if (gameOver) {
-            renderGameOver();
-            return;
-        }
+    private void handleGameState() {
 
-        // Point head = snake.getHead();
+    }
+
+    private void update() {
         Point newHead = snake.getNewHead();
         System.out.println("Current position - X: " + newHead.x + ", Y: " + newHead.y);
 
         // Check if the new head position is out of the play area
         if (newHead.x < BORDER_OFFSET || newHead.x >= GRID_SIZE - BORDER_OFFSET ||
                 newHead.y < BORDER_OFFSET || newHead.y >= GRID_SIZE - BORDER_OFFSET) {
-            gameOver = true;
+            gameState = GameState.GAME_OVER;
             return;
         }
 
         // Collision with itself
         if (snake.body.contains(newHead)) {
-            gameOver = true;
+            gameState = GameState.GAME_OVER;
             return;
         }
 
@@ -204,7 +235,7 @@ public class SnakeGame {
         }
     }
 
-    private void render() {
+    private void renderGame() {
         setupProjection();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         nvgBeginFrame(vg, WINDOW_WIDTH, WINDOW_HEIGHT, 1);
@@ -256,22 +287,22 @@ public class SnakeGame {
 
         float x = WINDOW_WIDTH / 2.0f; // Halfway across the width of the window
         float y = WINDOW_HEIGHT / 2.0f; // Halfway down the height of the window
-        float lineHeight = 48.0f;
+        float lineHeight = 68.0f;
 
         // Draw "GAME OVER" text
-        renderCenteredText("GAME OVER", y, 48, color);
-
-        y += lineHeight;
+        renderCenteredText("GAME OVER", y - lineHeight, 48, color);
 
         // Draw score text
         renderCenteredText("Your score: " + score, y, 24, color);
 
-        y+= lineHeight;
-
         // Render button during game over
-        Button restartButton = new Button(x - 50, y, 100, 50, "Restart", this::restart);
+        Button restartButton = new Button(x - 50, y + lineHeight, 100, 50, "Restart", this::restart);
         buttons.add(restartButton);
         renderButton(restartButton, color);
+
+        Button mainMenuButton = new Button(x - 50, y + lineHeight * 2, 100, 50, "Main menu", this::mainMenu);
+        buttons.add(mainMenuButton);
+        renderButton(mainMenuButton, color);
 
         nvgEndFrame(vg); // End the frame
 
@@ -337,8 +368,8 @@ public class SnakeGame {
     }
 
     private void restart() {
-        gameOver = false;
-        start();
+        gameState = GameState.MAIN_MENU;
+        play();
     }
 
     private void cleanup() {
@@ -348,6 +379,57 @@ public class SnakeGame {
 
         // Terminate GLFW
         glfwTerminate();
+    }
+
+    private void renderMainMenu() {
+        nvgBeginFrame(vg, WINDOW_WIDTH, WINDOW_HEIGHT, 1); // Start a new frame for NanoVG
+
+        NVGColor color = NVGColor.create(); // Prepare color object
+
+        float x = WINDOW_WIDTH / 2.0f; // Halfway across the width of the window
+        float y = WINDOW_HEIGHT / 2.0f; // Halfway down the height of the window
+        float lineHeight = 48.0f;
+
+        // Draw "Snake Game" text
+        renderCenteredText("Snake Game", y - lineHeight, 48, color);
+
+        Button playButton = new Button(x - 50, y, 100, 50, "Play", this::difficultyMenu);
+        buttons.add(playButton);
+        renderButton(playButton, color);
+
+        nvgEndFrame(vg); // End the frame
+
+        glfwSwapBuffers(window);
+    }
+
+    private void renderDifficultyMenu() {
+        nvgBeginFrame(vg, WINDOW_WIDTH, WINDOW_HEIGHT, 1); // Start a new frame for NanoVG
+
+        NVGColor color = NVGColor.create(); // Prepare color object
+
+        float x = WINDOW_WIDTH / 2.0f; // Halfway across the width of the window
+        float y = WINDOW_HEIGHT / 2.0f; // Halfway down the height of the window
+        float lineHeight = 68.0f;
+
+        // Draw "Snake Game" text
+        renderCenteredText("Choose difficulty", y - lineHeight * 2, 48, color);
+
+        Button easyButton = new Button(x - 50, y - lineHeight, 100, 50, "Easy", this::play);
+        buttons.add(easyButton);
+        renderButton(easyButton, color);
+
+
+        Button mediumButton = new Button(x - 50, y, 100, 50, "Medium", this::play);
+        buttons.add(mediumButton);
+        renderButton(mediumButton, color);
+
+        Button hardButton = new Button(x - 50, y + lineHeight, 100, 50, "Hard", this::play);
+        buttons.add(hardButton);
+        renderButton(hardButton, color);
+
+        nvgEndFrame(vg); // End the frame
+
+        glfwSwapBuffers(window);
     }
 
     public static void main(String[] args) {
