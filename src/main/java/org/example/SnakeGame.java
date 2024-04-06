@@ -26,6 +26,13 @@ import static org.lwjgl.nanovg.NanoVG.*;
 import static org.lwjgl.nanovg.NanoVGGL3.*;
 
 public class SnakeGame {
+    private static final int WINDOW_WIDTH = 900;
+    private static final int WINDOW_HEIGHT = 900;
+    private static final int BORDER_SIZE = 60; // Pixels for border width
+    private static final int GRID_SIZE = 30; // the size of the grid for the snake game
+
+    private static final int BORDER_OFFSET = BORDER_SIZE / (WINDOW_WIDTH / GRID_SIZE); // Border offset in grid cells
+
     private Snake snake;
     private Point food;
     private boolean gameOver;
@@ -33,7 +40,6 @@ public class SnakeGame {
     private int score;
 
     private long vg; // The NanoVG context handle
-    private int font; // The font handle
 
     public SnakeGame() {
         start();
@@ -41,20 +47,24 @@ public class SnakeGame {
 
     private void start() {
         // Initialize the snake in the middle of the screen
-        snake = new Snake(5, 5);
+        snake = new Snake(GRID_SIZE / 2, GRID_SIZE / 2);
         snake.direction = UP;
         score = 0;
         spawnFood();
     }
 
     private void spawnFood() {
-        int maxX = 15;
-        int maxY = 15;
+        int minX = BORDER_OFFSET;
+        int maxX = GRID_SIZE - BORDER_OFFSET - 1;
+        int minY = BORDER_OFFSET; // Starts food spawning at the top border
+        int maxY = GRID_SIZE - BORDER_OFFSET - 1;
+
         Point potentialFood;
         do {
-            potentialFood = new Point((int) (Math.random() * maxX), (int) (Math.random() * maxY));
-        } while (snake.body.contains(potentialFood)); // Keep generating points until it's not on the snake
-        food = potentialFood; // Place the food at the free spot
+            potentialFood = new Point(minX + (int) (Math.random() * (maxX - minX + 1)),
+                    minY + (int) (Math.random() * (maxY - minY + 1)));
+        } while (snake.body.contains(potentialFood));
+        food = potentialFood;
     }
 
     public void run() {
@@ -70,7 +80,7 @@ public class SnakeGame {
         }
 
         // Create the window
-        window = glfwCreateWindow(1000, 1000, "Snake Game", NULL, NULL);
+        window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Snake Game", NULL, NULL);
         if (window == NULL) {
             throw new RuntimeException("Failed to create the GLFW window");
         }
@@ -123,9 +133,7 @@ public class SnakeGame {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the framebuffer
 
 
-            // Update 10 times per second
-            double nsPerUpdate = 1.0 / 10;
-            if (deltaTime >= nsPerUpdate) {
+            if (deltaTime >= 0.1) { // 10 updates per second
                 update();
                 lastUpdateTime = currentTime;
             }
@@ -153,9 +161,9 @@ public class SnakeGame {
         Point newHead = snake.getNewHead();
         System.out.println("Current position - X: " + newHead.x + ", Y: " + newHead.y);
 
-        // Collision with walls
-        if (newHead.x < 0 || newHead.y < 0 || newHead.x >= 15 || newHead.y >= 15) {
-            System.out.println("Collision with walls - X: " + newHead.x + ", Y: " + newHead.y);
+        // Check if the new head position is out of the play area
+        if (newHead.x < BORDER_OFFSET || newHead.x >= GRID_SIZE - BORDER_OFFSET ||
+                newHead.y < BORDER_OFFSET || newHead.y >= GRID_SIZE - BORDER_OFFSET) {
             gameOver = true;
             return;
         }
@@ -177,29 +185,18 @@ public class SnakeGame {
     }
 
     private void render() {
-        // Clear the frame buffer
+        setupProjection();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // Set up orthographic projection to match grid size
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        glOrtho(0.0f, 15.0f, 15.0f, 0.0f, -1.0f, 1.0f);
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-
-        nvgBeginFrame(vg, 1000, 1000, 1);
-
-        // Set font size, face, alignment, and draw the text
-        nvgFontSize(vg, 24.0f);
-        nvgFontFace(vg, "Poppins");
-        nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-        nvgText(vg, 10, 10, "Score: " + score);
-
-        // End frame for NanoVG
+        nvgBeginFrame(vg, WINDOW_WIDTH, WINDOW_HEIGHT, 1);
+        renderScore();
         nvgEndFrame(vg);
+        renderPlayAreaBorder();
+        renderSnake();
+        renderFood();
+    }
 
-        // Render the snake
-        glColor3f(0.0f, 1.0f, 0.0f); // Green color
+    private void renderSnake() {
+        glColor3f(0.0f, 1.0f, 0.0f); // Green color for the snake
         for (Point segment : snake.body) {
             glBegin(GL_QUADS);
             glVertex2f(segment.x, segment.y);
@@ -208,8 +205,9 @@ public class SnakeGame {
             glVertex2f(segment.x, segment.y + 1);
             glEnd();
         }
+    }
 
-        // Render the food
+    private void renderFood() {
         glColor3f(1.0f, 0.0f, 0.0f); // Red color
         glBegin(GL_QUADS);
         glVertex2f(food.x, food.y);
@@ -219,10 +217,20 @@ public class SnakeGame {
         glEnd();
     }
 
+    private void renderPlayAreaBorder() {
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glBegin(GL_LINE_LOOP);
+        glVertex2f(BORDER_OFFSET, BORDER_OFFSET);
+        glVertex2f(GRID_SIZE - BORDER_OFFSET, BORDER_OFFSET);
+        glVertex2f(GRID_SIZE - BORDER_OFFSET, GRID_SIZE - BORDER_OFFSET);
+        glVertex2f(BORDER_OFFSET, GRID_SIZE - BORDER_OFFSET);
+        glEnd();
+    }
+
     private void renderGameOver() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the screen
 
-        nvgBeginFrame(vg, 1000, 1000, 1); // Start a new frame for NanoVG
+        nvgBeginFrame(vg, WINDOW_WIDTH, WINDOW_HEIGHT, 1); // Start a new frame for NanoVG
 
         // Set the style for the "GAME OVER" text
         nvgFontSize(vg, 48.0f); // Font size
@@ -230,8 +238,8 @@ public class SnakeGame {
         nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE); // Centered text
 
         // Calculate the position to draw the text. This example centers it on the screen.
-        float x = 1000 / 2.0f; // Halfway across the width of the window
-        float y = 1000 / 2.0f; // Halfway down the height of the window
+        float x = WINDOW_WIDTH / 2.0f; // Halfway across the width of the window
+        float y = WINDOW_HEIGHT / 2.0f; // Halfway down the height of the window
         float lineHeight = 48.0f;
 
         // Draw the "GAME OVER" text
@@ -241,7 +249,7 @@ public class SnakeGame {
         y += lineHeight;
 
         // Render the score on the next line
-        nvgText(vg, x, y, "Score: " + score);
+        nvgText(vg, x, y, "Your score: " + score);
 
         nvgEndFrame(vg); // End the frame
 
@@ -254,10 +262,27 @@ public class SnakeGame {
             throw new RuntimeException("Could not init NanoVG.");
         }
 
-        font = nvgCreateFont(vg, "Poppins", "src/main/resources/fonts/Poppins-Regular.ttf");
+        // The font handle
+        int font = nvgCreateFont(vg, "Poppins", "src/main/resources/fonts/Poppins-Regular.ttf");
         if (font == -1) {
             throw new RuntimeException("Failed to create font.");
         }
+    }
+
+    private void setupProjection() {
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        // Adjusting the projection to center the grid in the window
+        glOrtho(0.0f, GRID_SIZE, GRID_SIZE, 0.0f, -1.0f, 1.0f);
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+    }
+
+    private void renderScore() {
+        nvgFontSize(vg, 36.0f);
+        nvgFontFace(vg, "Poppins");
+        nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        nvgText(vg, WINDOW_WIDTH / 2.0f, BORDER_OFFSET + ((float) BORDER_SIZE / 2), "Score: " + score);
     }
 
     private void restart() {
