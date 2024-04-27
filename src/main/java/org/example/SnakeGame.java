@@ -115,6 +115,9 @@ public class SnakeGame {
             throw new IllegalStateException("Unable to initialize GLFW");
         }
 
+        // Set window to be non-resizable
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
         // Create the window
         window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Snake Game", NULL, NULL);
         if (window == NULL) {
@@ -137,7 +140,11 @@ public class SnakeGame {
                     case GLFW_KEY_RIGHT -> {
                         if (snake.direction != LEFT) snake.direction = RIGHT;
                     }
-                    case GLFW_KEY_R -> restart();
+                    case GLFW_KEY_R ->  {
+                        if(gameState == GameState.PLAYING || gameState == GameState.GAME_OVER) {
+                            restart();
+                        }
+                    }
                     case GLFW_KEY_Q -> System.exit(0);
                 }
             }
