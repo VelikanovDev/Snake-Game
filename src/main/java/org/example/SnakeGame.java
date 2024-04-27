@@ -45,9 +45,9 @@ public class SnakeGame {
             BORDER_SIZE / (WINDOW_WIDTH / GRID_SIZE); // Border offset in grid cells
 
     // Updates per second
-    private final double EASY = 0.1;
-    private final double MEDIUM = 0.07;
-    private final double HARD = 0.05;
+    private static final double EASY = 0.1;
+    private static final double MEDIUM = 0.07;
+    private static final double HARD = 0.05;
 
     private Snake snake;
     private Point food;
@@ -264,7 +264,8 @@ public class SnakeGame {
         setupProjection();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         nvgBeginFrame(vg, WINDOW_WIDTH, WINDOW_HEIGHT, 1);
-        renderScore();
+        // Render the difficulty and score
+        renderDifficultyAndScore();
         nvgEndFrame(vg);
         renderPlayAreaBorder();
         renderSnake();
@@ -416,13 +417,39 @@ public class SnakeGame {
         glLoadIdentity();
     }
 
-    private void renderScore() {
+    private void renderDifficultyAndScore() {
         nvgFontSize(vg, 36.0f);
         nvgFontFace(vg, "Poppins");
         nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-        nvgText(vg, WINDOW_WIDTH / 2.0f, BORDER_OFFSET + ((float) BORDER_SIZE / 2), "Score: " + score);
+
+        // Calculate positions
+        float scoreX = WINDOW_WIDTH / 2.0f;  // Center of the window
+        float scoreY = BORDER_OFFSET + (float) BORDER_SIZE / 2; // Near the top of the window
+        float difficultyY = WINDOW_HEIGHT - (BORDER_OFFSET + (float) BORDER_SIZE / 2); // Near the bottom of the window
+
+        NVGColor textColor = NVGColor.create();
+        nvgRGBA((byte)255, (byte)255, (byte)255, (byte)255, textColor); // White color
+        nvgFillColor(vg, textColor);
+
+        // Draw Score
+        String scoreText = "Score: " + score;
+        nvgText(vg, scoreX, scoreY, scoreText);
+
+        // Draw Difficulty
+        String difficultyText = "Difficulty: " + getDifficultyName();
+        nvgText(vg, scoreX, difficultyY, difficultyText);
     }
 
+    private String getDifficultyName() {
+        if (difficulty == EASY) {
+            return "EASY";
+        } else if (difficulty == MEDIUM) {
+            return "MEDIUM";
+        } else if (difficulty == HARD) {
+            return "HARD";
+        }
+        return ""; // Default case, should not happen
+    }
     private void restart() {
         gameState = GameState.MAIN_MENU;
         play(difficulty);
