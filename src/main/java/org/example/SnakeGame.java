@@ -173,7 +173,7 @@ public class SnakeGame {
     }
 
     private void loop() {
-        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClearColor(0.0f, 0.4f, 0.78f, 0.0f);
 
         // Initialize the last update time variable
         double lastUpdateTime = glfwGetTime();
@@ -265,7 +265,7 @@ public class SnakeGame {
     }
 
     private void renderSnake() {
-        glColor3f(0.0f, 1.0f, 0.0f); // Green color for the snake
+        glColor3f(0.1f, 0.7f, 0.1f); // Soft green
         for (Point segment : snake.body) {
             glBegin(GL_QUADS);
             glVertex2f(segment.x, segment.y);
@@ -296,7 +296,7 @@ public class SnakeGame {
     }
 
     private void renderPlayAreaBorder() {
-        glColor3f(1.0f, 1.0f, 1.0f);
+        glColor3f(0.75f, 0.75f, 0.75f); // Light grey
         glBegin(GL_LINE_LOOP);
         glVertex2f(BORDER_OFFSET, BORDER_OFFSET);
         glVertex2f(GRID_SIZE - BORDER_OFFSET, BORDER_OFFSET);
@@ -352,12 +352,13 @@ public class SnakeGame {
         nvgRect(vg, button.x, button.y, button.width, button.height);
 
         // Set background color for the button
-        nvgRGBA((byte)200, (byte)200, (byte)200, (byte)255, color); // Light gray background
+        nvgRGBA((byte)25.5, (byte)178.5, (byte)25.5, (byte)255, color); // Light gray background
+
         nvgFillColor(vg, color);
         nvgFill(vg);
 
         // Set text color
-        nvgRGBA((byte)0, (byte)0, (byte)0, (byte)255, color); // Black text
+        nvgRGBA((byte)255, (byte)255, (byte)255, (byte)255, color); // Black text
         nvgFillColor(vg, color);
         nvgFontSize(vg, 20);
         nvgFontFace(vg, "Poppins");
