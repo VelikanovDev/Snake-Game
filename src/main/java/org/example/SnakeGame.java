@@ -324,19 +324,19 @@ public class SnakeGame {
         float lineHeight = 68.0f;
 
         // Draw "GAME OVER" text
-        renderCenteredText("GAME OVER", y - lineHeight, 48, color);
+        renderCenteredText("GAME OVER", y - lineHeight * 2, 48, color);
 
         // Draw score text
-        renderCenteredText("Your score: " + score, y, 24, color);
+        renderCenteredText("Your score: " + score, y - lineHeight, 24, color);
 
         buttons.clear(); // Clear previous buttons
 
         // Render button during game over
-        Button restartButton = new Button(x - 50, y + lineHeight, 100, 50, "Restart", this::restart);
+        Button restartButton = new Button(x - 50, y, 100, 50, "Restart", this::restart);
         buttons.add(restartButton);
         renderButton(restartButton, color);
 
-        Button mainMenuButton = new Button(x - 50, y + lineHeight * 2, 100, 50, "Main menu", this::mainMenu);
+        Button mainMenuButton = new Button(x - 50, y + lineHeight, 100, 50, "Main menu", this::mainMenu);
         buttons.add(mainMenuButton);
         renderButton(mainMenuButton, color);
 
@@ -451,15 +451,15 @@ public class SnakeGame {
 
         buttons.clear(); // Clear previous buttons
 
-        Button playButton = new Button(x - 50, y, 100, 50, "Play", this::difficultyMenu);
+        Button playButton = new Button(x - 50, y - lineHeight, 100, 50, "Play", this::difficultyMenu);
         buttons.add(playButton);
         renderButton(playButton, color);
 
-        Button helpButton = new Button(x - 50, y + lineHeight, 100, 50, "Help", this::help);
+        Button helpButton = new Button(x - 50, y, 100, 50, "Help", this::help);
         buttons.add(helpButton);
         renderButton(helpButton, color);
 
-        Button quitButton = new Button(x - 50, y + lineHeight * 2, 100, 50, "Quit", () -> System.exit(0));
+        Button quitButton = new Button(x - 50, y + lineHeight, 100, 50, "Quit", () -> System.exit(0));
         buttons.add(quitButton);
         renderButton(quitButton, color);
 
