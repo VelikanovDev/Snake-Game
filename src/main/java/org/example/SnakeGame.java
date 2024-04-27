@@ -3,6 +3,12 @@ package org.example;
 import org.lwjgl.nanovg.NVGColor;
 import org.lwjgl.opengl.*;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -70,7 +76,6 @@ public class SnakeGame {
     }
 
     private void play(double difficultyValue) {
-        System.out.println("play()");
         // Initialize the snake in the middle of the screen
         difficulty = difficultyValue;
         gameState = GameState.PLAYING;
@@ -113,7 +118,7 @@ public class SnakeGame {
         }
 
         // Setup a key callback
-        glfwSetKeyCallback(window, (_, key, scancode, action, _) -> {
+        glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
             if (action == GLFW_PRESS) {
                 switch (key) {
                     case GLFW_KEY_UP -> {
@@ -152,7 +157,7 @@ public class SnakeGame {
 
         GL.createCapabilities();
 
-        foodTexture = TextureLoader.loadTexture("src/main/resources/textures/apple.png");
+        foodTexture = TextureLoader.loadTexture("/textures/apple.png");
 
         // Initialize NanoVG
         initNanoVG();
@@ -170,7 +175,6 @@ public class SnakeGame {
         double lastUpdateTime = glfwGetTime();
 
         while (!glfwWindowShouldClose(window)) {
-            System.out.println("Loop");
             double currentTime = glfwGetTime();
             double deltaTime = currentTime - lastUpdateTime;
 
@@ -178,7 +182,6 @@ public class SnakeGame {
 
             switch (gameState) {
                 case PLAYING -> {
-                    System.out.println("GameState.PLAYING");
                     renderGame();
 
                     if (deltaTime >= difficulty) {
@@ -188,14 +191,12 @@ public class SnakeGame {
                 }
 
                 case MAIN_MENU -> {
-                    System.out.println("GameState.MAIN_MENU");
                     renderMainMenu();
                     while (gameState == GameState.MAIN_MENU && !glfwWindowShouldClose(window)) {
                         glfwPollEvents(); // Keep the window responsive
                     }
                 }
                 case DIFFICULTY_MENU -> {
-                    System.out.println("GameState.DIFFICULTY_MENU");
                     renderDifficultyMenu();
                     while (gameState == GameState.DIFFICULTY_MENU && !glfwWindowShouldClose(window)) {
                         glfwPollEvents(); // Keep the window responsive
@@ -203,7 +204,6 @@ public class SnakeGame {
                 }
 
                 case GAME_OVER -> {
-                    System.out.println("GameState.GAME_OVER");
                     renderGameOver();
                     while (gameState == GameState.GAME_OVER && !glfwWindowShouldClose(window)) {
                         glfwPollEvents(); // Keep the window responsive
@@ -218,7 +218,6 @@ public class SnakeGame {
 
     private void update() {
         Point newHead = snake.getNewHead();
-        System.out.println("Current position - X: " + newHead.x + ", Y: " + newHead.y);
 
         // Check if the new head position is out of the play area
         if (newHead.x < BORDER_OFFSET || newHead.x >= GRID_SIZE - BORDER_OFFSET ||
@@ -312,6 +311,8 @@ public class SnakeGame {
         // Draw score text
         renderCenteredText("Your score: " + score, y, 24, color);
 
+        buttons.clear(); // Clear previous buttons
+
         // Render button during game over
         Button restartButton = new Button(x - 50, y + lineHeight, 100, 50, "Restart", this::restart);
         buttons.add(restartButton);
@@ -361,10 +362,29 @@ public class SnakeGame {
             throw new RuntimeException("Could not init NanoVG.");
         }
 
-        // The font handle
-        int font = nvgCreateFont(vg, "Poppins", "src/main/resources/fonts/Poppins-Regular.ttf");
-        if (font == -1) {
-            throw new RuntimeException("Failed to create font.");
+        // Load font from classpath resource
+        String fontPath = "/fonts/Poppins-Regular.ttf"; // Path should be relative to the classpath
+        InputStream fontInputStream = SnakeGame.class.getResourceAsStream(fontPath);
+        if (fontInputStream == null) {
+            throw new RuntimeException("Font file not found: " + fontPath);
+        }
+
+        try {
+            // Create a temporary file to copy the font
+            File tempFile = File.createTempFile("Poppins-Regular", ".ttf");
+            tempFile.deleteOnExit();
+            try (FileOutputStream out = new FileOutputStream(tempFile);
+                 ReadableByteChannel rbc = Channels.newChannel(fontInputStream)) {
+                out.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+            }
+
+            // Load the font from the temporary file path
+            int font = nvgCreateFont(vg, "Poppins", tempFile.getAbsolutePath());
+            if (font == -1) {
+                throw new RuntimeException("Failed to create font from: " + tempFile.getAbsolutePath());
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load font resource", e);
         }
     }
 
@@ -405,14 +425,20 @@ public class SnakeGame {
 
         float x = WINDOW_WIDTH / 2.0f; // Halfway across the width of the window
         float y = WINDOW_HEIGHT / 2.0f; // Halfway down the height of the window
-        float lineHeight = 48.0f;
+        float lineHeight = 68.0f;
 
         // Draw "Snake Game" text
         renderCenteredText("Snake Game", y - lineHeight, 48, color);
 
+        buttons.clear(); // Clear previous buttons
+
         Button playButton = new Button(x - 50, y, 100, 50, "Play", this::difficultyMenu);
         buttons.add(playButton);
         renderButton(playButton, color);
+
+        Button quitButton = new Button(x - 50, y + lineHeight, 100, 50, "Quit", () -> System.exit(0));
+        buttons.add(quitButton);
+        renderButton(quitButton, color);
 
         nvgEndFrame(vg); // End the frame
 
@@ -430,6 +456,8 @@ public class SnakeGame {
 
         // Draw "Snake Game" text
         renderCenteredText("Choose difficulty", y - lineHeight * 2, 48, color);
+
+        buttons.clear(); // Clear previous buttons
 
         Button easyButton = new Button(x - 50, y - lineHeight, 100, 50, "Easy", () -> play(EASY));
         buttons.add(easyButton);
