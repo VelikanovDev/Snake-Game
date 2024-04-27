@@ -71,6 +71,10 @@ public class SnakeGame {
         buttons = new ArrayList<>();
     }
 
+    private void help() {
+        gameState = GameState.HELP; // Set the game state to HELP
+    }
+
     private void difficultyMenu() {
         gameState = GameState.DIFFICULTY_MENU;
     }
@@ -193,6 +197,13 @@ public class SnakeGame {
                 case MAIN_MENU -> {
                     renderMainMenu();
                     while (gameState == GameState.MAIN_MENU && !glfwWindowShouldClose(window)) {
+                        glfwPollEvents(); // Keep the window responsive
+                    }
+                }
+
+                case HELP -> {
+                    renderHelpScreen();
+                    while (gameState == GameState.HELP && !glfwWindowShouldClose(window)) {
                         glfwPollEvents(); // Keep the window responsive
                     }
                 }
@@ -428,7 +439,7 @@ public class SnakeGame {
         float lineHeight = 68.0f;
 
         // Draw "Snake Game" text
-        renderCenteredText("Snake Game", y - lineHeight, 48, color);
+        renderCenteredText("Snake Game", y - lineHeight * 2, 48, color);
 
         buttons.clear(); // Clear previous buttons
 
@@ -436,11 +447,46 @@ public class SnakeGame {
         buttons.add(playButton);
         renderButton(playButton, color);
 
-        Button quitButton = new Button(x - 50, y + lineHeight, 100, 50, "Quit", () -> System.exit(0));
+        Button helpButton = new Button(x - 50, y + lineHeight, 100, 50, "Help", this::help);
+        buttons.add(helpButton);
+        renderButton(helpButton, color);
+
+        Button quitButton = new Button(x - 50, y + lineHeight * 2, 100, 50, "Quit", () -> System.exit(0));
         buttons.add(quitButton);
         renderButton(quitButton, color);
 
         nvgEndFrame(vg); // End the frame
+
+        glfwSwapBuffers(window);
+    }
+
+    private void renderHelpScreen() {
+        nvgBeginFrame(vg, WINDOW_WIDTH, WINDOW_HEIGHT, 1);
+
+        NVGColor color = NVGColor.create(); // Prepare color object
+
+        float x = WINDOW_WIDTH / 2.0f; // Halfway across the width of the window
+        float y = WINDOW_HEIGHT / 2.0f; // Halfway down the height of the window
+        float lineHeight = 68.0f;
+
+        // Instructions
+        String text1 = "Use the arrow keys to navigate the snake towards the food.";
+        String text2 = "Avoid the walls and your own tail.";
+        String text3 = "Press 'R' to restart at any time.";
+        String text4 = "Press 'Q' to quit the game";
+
+        renderCenteredText(text1, y - lineHeight * 2, 36, color);
+        renderCenteredText(text2, y - lineHeight, 36, color);
+        renderCenteredText(text3, y, 36, color);
+        renderCenteredText(text4, y + lineHeight, 36, color);
+
+        buttons.clear(); // Clear previous buttons
+
+        Button mainMenuButton = new Button(x - 50, y + lineHeight * 2, 100, 50, "Main menu", this::mainMenu);
+        buttons.add(mainMenuButton);
+        renderButton(mainMenuButton, color);
+
+        nvgEndFrame(vg);
 
         glfwSwapBuffers(window);
     }
