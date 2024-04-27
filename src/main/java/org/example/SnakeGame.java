@@ -33,7 +33,7 @@ public class SnakeGame {
     private static final int WINDOW_WIDTH = 900;
     private static final int WINDOW_HEIGHT = 900;
     private static final int BORDER_SIZE = 60; // Pixels for border width
-    private static final int GRID_SIZE = 30; // the size of the grid for the snake game
+    private static final int GRID_SIZE = 30; // The size of the grid for the snake game
 
     private static final int BORDER_OFFSET =
             BORDER_SIZE / (WINDOW_WIDTH / GRID_SIZE); // Border offset in grid cells
@@ -53,6 +53,8 @@ public class SnakeGame {
     private List<Button> buttons;
     private GameState gameState;
     private double difficulty; // EASY, MEDIUM, HARD
+
+    private int foodTexture;
 
     public SnakeGame() {
         mainMenu();
@@ -145,11 +147,13 @@ public class SnakeGame {
                 }
             }
         });
-
         // Make the OpenGL context current
         glfwMakeContextCurrent(window);
 
         GL.createCapabilities();
+
+        foodTexture = TextureLoader.loadTexture("src/main/resources/textures/apple.png");
+
         // Initialize NanoVG
         initNanoVG();
         // Enable v-sync
@@ -173,7 +177,6 @@ public class SnakeGame {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the framebuffer
 
             switch (gameState) {
-
                 case PLAYING -> {
                     System.out.println("GameState.PLAYING");
                     renderGame();
@@ -182,7 +185,6 @@ public class SnakeGame {
                         update();
                         lastUpdateTime = currentTime;
                     }
-
                 }
 
                 case MAIN_MENU -> {
@@ -265,13 +267,22 @@ public class SnakeGame {
     }
 
     private void renderFood() {
-        glColor3f(1.0f, 0.0f, 0.0f); // Red color
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, foodTexture);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f); // Ensure full color and alpha
+
         glBegin(GL_QUADS);
-        glVertex2f(food.x, food.y);
-        glVertex2f(food.x + 1, food.y);
-        glVertex2f(food.x + 1, food.y + 1);
-        glVertex2f(food.x, food.y + 1);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f(food.x, food.y);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f(food.x + 1, food.y);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f(food.x + 1, food.y + 1);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f(food.x, food.y + 1);
         glEnd();
+
+        glDisable(GL_TEXTURE_2D);
+        glDisable(GL_BLEND);
     }
 
     private void renderPlayAreaBorder() {
