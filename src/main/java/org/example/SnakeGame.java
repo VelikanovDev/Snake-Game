@@ -35,7 +35,13 @@ public class SnakeGame {
     private static final int BORDER_SIZE = 60; // Pixels for border width
     private static final int GRID_SIZE = 30; // the size of the grid for the snake game
 
-    private static final int BORDER_OFFSET = BORDER_SIZE / (WINDOW_WIDTH / GRID_SIZE); // Border offset in grid cells
+    private static final int BORDER_OFFSET =
+            BORDER_SIZE / (WINDOW_WIDTH / GRID_SIZE); // Border offset in grid cells
+
+    // Updates per second
+    private final double EASY = 0.1;
+    private final double MEDIUM = 0.07;
+    private final double HARD = 0.05;
 
     private Snake snake;
     private Point food;
@@ -46,6 +52,7 @@ public class SnakeGame {
 
     private List<Button> buttons;
     private GameState gameState;
+    private double difficulty; // EASY, MEDIUM, HARD
 
     public SnakeGame() {
         mainMenu();
@@ -60,9 +67,10 @@ public class SnakeGame {
         gameState = GameState.DIFFICULTY_MENU;
     }
 
-    private void play() {
+    private void play(double difficultyValue) {
         System.out.println("play()");
         // Initialize the snake in the middle of the screen
+        difficulty = difficultyValue;
         gameState = GameState.PLAYING;
         snake = new Snake(GRID_SIZE / 2, GRID_SIZE / 2);
         snake.direction = UP;
@@ -103,7 +111,7 @@ public class SnakeGame {
         }
 
         // Setup a key callback
-        glfwSetKeyCallback(window, (window, key, scancode, action, mods) -> {
+        glfwSetKeyCallback(window, (_, key, scancode, action, _) -> {
             if (action == GLFW_PRESS) {
                 switch (key) {
                     case GLFW_KEY_UP -> {
@@ -138,7 +146,6 @@ public class SnakeGame {
             }
         });
 
-
         // Make the OpenGL context current
         glfwMakeContextCurrent(window);
 
@@ -166,6 +173,18 @@ public class SnakeGame {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the framebuffer
 
             switch (gameState) {
+
+                case PLAYING -> {
+                    System.out.println("GameState.PLAYING");
+                    renderGame();
+
+                    if (deltaTime >= difficulty) {
+                        update();
+                        lastUpdateTime = currentTime;
+                    }
+
+                }
+
                 case MAIN_MENU -> {
                     System.out.println("GameState.MAIN_MENU");
                     renderMainMenu();
@@ -180,16 +199,7 @@ public class SnakeGame {
                         glfwPollEvents(); // Keep the window responsive
                     }
                 }
-                case PLAYING -> {
-                    System.out.println("GameState.PLAYING");
-                    renderGame();
 
-                    if (deltaTime >= 0.1) { // 10 updates per second
-                        update();
-                        lastUpdateTime = currentTime;
-                    }
-
-                }
                 case GAME_OVER -> {
                     System.out.println("GameState.GAME_OVER");
                     renderGameOver();
@@ -202,10 +212,6 @@ public class SnakeGame {
             glfwSwapBuffers(window); // Swap the color buffers
             glfwPollEvents();
         }
-    }
-
-    private void handleGameState() {
-
     }
 
     private void update() {
@@ -369,7 +375,7 @@ public class SnakeGame {
 
     private void restart() {
         gameState = GameState.MAIN_MENU;
-        play();
+        play(difficulty);
     }
 
     private void cleanup() {
@@ -414,16 +420,16 @@ public class SnakeGame {
         // Draw "Snake Game" text
         renderCenteredText("Choose difficulty", y - lineHeight * 2, 48, color);
 
-        Button easyButton = new Button(x - 50, y - lineHeight, 100, 50, "Easy", this::play);
+        Button easyButton = new Button(x - 50, y - lineHeight, 100, 50, "Easy", () -> play(EASY));
         buttons.add(easyButton);
         renderButton(easyButton, color);
 
 
-        Button mediumButton = new Button(x - 50, y, 100, 50, "Medium", this::play);
+        Button mediumButton = new Button(x - 50, y, 100, 50, "Medium", () -> play(MEDIUM));
         buttons.add(mediumButton);
         renderButton(mediumButton, color);
 
-        Button hardButton = new Button(x - 50, y + lineHeight, 100, 50, "Hard", this::play);
+        Button hardButton = new Button(x - 50, y + lineHeight, 100, 50, "Hard", () -> play(HARD));
         buttons.add(hardButton);
         renderButton(hardButton, color);
 
